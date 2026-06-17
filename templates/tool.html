@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Afsar Bind Tool</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #1e1e2f; color: white; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background-color: #2a2a40; width: 100%; max-width: 500px; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3a3a5c; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h2 { color: #00d2ff; margin: 0; font-size: 20px; }
+        .badge { background-color: #ffcc00; color: black; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 14px; }
+        .logout-btn { background-color: #ff4c4c; color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #a5a5c0; }
+        input[type="text"] { width: 100%; padding: 12px; border: none; border-radius: 5px; background-color: #3a3a5c; color: white; font-size: 16px; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-info { background-color: #007bff; } .btn-bound { background-color: #ff007f; } .btn-eat { background-color: #00cc66; }
+        #result-box { margin-top: 20px; padding: 15px; background-color: #151521; border-radius: 5px; min-height: 80px; font-family: monospace; color: #00ff00; word-wrap: break-word; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>नमस्ते, {{ name }}!</h2>
+            <span class="badge" id="coinBalance">🪙 Coins: {{ coins }}</span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+        
+        <div class="form-group">
+            <label>Access Token / EAT URL (1 Coin/Use)</label>
+            <input type="text" id="tokenInput" placeholder="यहाँ Token या EAT Link पेस्ट करें...">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-info" onclick="callApi('/api/check_info')">Check Info</button>
+            <button class="btn-bound" onclick="callApi('/api/bound_accounts')">Bound Accounts</button>
+            <button class="btn-eat" onclick="callApi('/api/eat_token', true)">Eat To Token</button>
+        </div>
+
+        <div id="result-box">परिणाम यहाँ दिखाई देगा...</div>
+    </div>
+
+    <script>
+        async function callApi(endpoint, isEat = false) {
+            const inputVal = document.getElementById('tokenInput').value;
+            const resultBox = document.getElementById('result-box');
+            const coinBalance = document.getElementById('coinBalance');
+            
+            let currentCoins = parseInt(coinBalance.innerText.replace(/\D/g,''));
+            if (currentCoins <= 0) {
+                resultBox.style.color = "#ff4c4c";
+                resultBox.innerText = "Error: आपके Coins खत्म हो गए हैं! Admin से संपर्क करें।";
+                return;
+            }
+
+            if (!inputVal) {
+                resultBox.style.color = "#ff4c4c";
+                resultBox.innerText = "कृपया पहले Token या URL डालें!";
+                return;
+            }
+
+            resultBox.style.color = "yellow";
+            resultBox.innerText = "प्रोसेस हो रहा है...";
+
+            const payload = isEat ? { eat_url: inputVal } : { access_token: inputVal };
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultBox.style.color = "#00ff66";
+                    resultBox.innerText = JSON.stringify(data, null, 4);
+                    currentCoins -= 1;
+                    coinBalance.innerText = "🪙 Coins: " + currentCoins;
+                } else {
+                    resultBox.style.color = "#ff4c4c";
+                    resultBox.innerText = "Error: " + (data.error || "Something went wrong!");
+                }
+            } catch (error) {
+                resultBox.style.color = "#ff4c4c";
+                resultBox.innerText = "Network Error: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
