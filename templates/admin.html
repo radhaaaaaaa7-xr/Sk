@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Afsar Bind Tool</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #1e1e2f; color: white; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background-color: #2a2a40; width: 100%; max-width: 850px; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3a3a5c; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h2 { color: #ffcc00; margin: 0; }
+        .logout-btn { background-color: #ff4c4c; color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #3a3a5c; }
+        th { background-color: #151521; color: #00d2ff; }
+        .action-box { display: flex; gap: 8px; align-items: center; }
+        input[type="number"] { padding: 8px; width: 70px; border-radius: 5px; border: none; background-color: #3a3a5c; color: white; outline: none; }
+        input[type="number"]:focus { border: 1px solid #00d2ff; }
+        button { padding: 8px 12px; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-add { background-color: #00cc66; }
+        .btn-add:hover { background-color: #00994d; }
+        .btn-deduct { background-color: #ff4c4c; }
+        .btn-deduct:hover { background-color: #cc0000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Admin Panel ({{ name }})</h2>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+
+        <h3>Registered Users</h3>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Coins</th>
+                <th>Manage Coins</th>
+            </tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user[0] }}</td>
+                <td>{{ user[1] }}</td>
+                <td>{{ user[2] }}</td>
+                <td id="coin-{{ user[0] }}" style="font-weight: bold; color: #ffcc00;">{{ user[3] }}</td>
+                <td>
+                    <div class="action-box">
+                        <input type="number" id="input-{{ user[0] }}" value="10" min="1">
+                        <button class="btn-add" onclick="manageCoins('{{ user[0] }}', 'add')">+ Add</button>
+                        <button class="btn-deduct" onclick="manageCoins('{{ user[0] }}', 'deduct')">- Deduct</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <script>
+        async function manageCoins(userId, action) {
+            const amount = document.getElementById(`input-${userId}`).value;
+            if (amount <= 0) return alert("सही अमाउंट डालें!");
+
+            const actionText = action === 'add' ? 'जोड़ना' : 'कम करना';
+            if (!confirm(`क्या आप सच में इस यूज़र के ${amount} कॉइन ${actionText} चाहते हैं?`)) return;
+
+            const response = await fetch('/api/manage_coins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, amount: amount, action: action })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById(`coin-${userId}`).innerText = data.new_balance;
+                alert(action === 'add' ? "Coins सफलतापूर्वक जुड़ गए!" : "Coins सफलतापूर्वक कम हो गए!");
+            } else {
+                alert("Error: " + data.error);
+            }
+        }
+    </script>
+</body>
+</html>
