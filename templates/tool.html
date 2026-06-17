@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFSAR X DEV</title>
+    <style>
+        /* 🌙 Dark Mode (Default) */
+        :root { 
+            --bg: #0a0a12; 
+            --box: #131326; 
+            --primary: #00f3ff; 
+            --primary-hover: #00b3cc;
+            --text: #ffffff; 
+            --border: #1f1f3d;
+            --input-bg: #1a1a3a;
+            --console-bg: #05050a;
+            --console-text: #00ffff;
+            --glow: 0 0 18px rgba(0, 243, 255, 0.4);
+            --modal-bg: #161630;
+        }
+
+        /* 🌞 Light Mode */
+        body.light-mode {
+            --bg: #f0f4f8; 
+            --box: #ffffff; 
+            --primary: #ff4757; 
+            --primary-hover: #e03747;
+            --text: #2f3542; 
+            --border: #ced6e0;
+            --input-bg: #f1f2f6;
+            --console-bg: #1e272e;
+            --console-text: #2ed573;
+            --glow: 0 5px 15px rgba(0,0,0,0.1);
+            --modal-bg: #ffffff;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); padding: 15px; margin: 0; transition: all 0.3s ease; }
+        
+        .theme-btn {
+            position: absolute; top: 15px; right: 15px; background: var(--box); color: var(--text);
+            border: 2px solid var(--primary); padding: 8px 16px; border-radius: 20px;
+            cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.3s; box-shadow: var(--glow);
+        }
+        .theme-btn:hover { background: var(--primary); color: #000; transform: translateY(-2px); }
+
+        .container { max-width: 600px; margin: 60px auto 20px; background: var(--box); padding: 25px; border-radius: 16px; box-shadow: var(--glow); }
+        
+        /* 🧑‍💻 Top Header Panel (User Info & Coins) */
+        .top-panel { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 243, 255, 0.05); padding: 12px 15px; border-radius: 10px; border: 1px solid var(--primary); margin-bottom: 20px; box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1); }
+        .user-info { font-weight: bold; font-size: 15px; color: var(--primary); }
+        .badge { background-color: #ffcc00; color: #000; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 13px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.5); }
+        .logout-btn { background-color: #ff4757; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: 0.3s; border: 1px solid #ff4757; }
+        .logout-btn:hover { background-color: transparent; color: #ff4757; box-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+
+        h2 { text-align: center; color: var(--primary); margin-top: 0; text-shadow: 0 0 12px rgba(0, 243, 255, 0.6); font-size: 24px; letter-spacing: 1px; }
+        
+        .main-input { width: 95%; padding: 12px; border-radius: 8px; border: 2px solid var(--border); background: var(--input-bg); color: var(--text); font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
+        .main-input:focus { border-color: var(--primary); outline: none; box-shadow: var(--glow); }
+
+        /* 🎛️ Feature Grid System */
+        .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .feature-btn { padding: 15px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text); border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; transition: 0.3s; }
+        body.light-mode .feature-btn { background: #f8f9fa; }
+        .feature-btn:hover { border-color: var(--primary); background: rgba(0, 243, 255, 0.1); transform: translateY(-2px); box-shadow: var(--glow); }
+
+        /* 📦 Popup / Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-box { background: var(--modal-bg); width: 90%; max-width: 450px; padding: 20px; border-radius: 12px; border: 2px solid var(--primary); box-shadow: var(--glow); position: relative; animation: popIn 0.3s ease-out; }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-title { font-weight: bold; color: var(--primary); font-size: 16px; }
+        .close-btn { background: none; border: none; color: #ff4757; font-size: 24px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .close-btn:hover { transform: scale(1.2); }
+
+        .modal-box input { width: 93%; padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); }
+        .action-btn { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .action-btn:hover { background: var(--primary-hover); }
+        body.light-mode .action-btn { color: #fff; }
+
+        /* 🖥️ Ultra Bright Terminal Console */
+        .console-container { margin-top: 25px; background: var(--console-bg); border-radius: 10px; border: 2px solid var(--primary); overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.9), var(--glow); }
+        .console-header { background: rgba(255,255,255,0.02); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid var(--primary); }
+        .clear-btn { background: #ff4757; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .console { color: var(--console-text); padding: 15px; font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; white-space: pre-wrap; height: 220px; overflow-y: auto; margin: 0; line-height: 1.6; text-shadow: 0 0 10px rgba(0, 255, 255, 0.95); }
+
+        /* 🔔 Toast Notifications */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 6px; color: white; font-weight: bold; font-size: 13px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out forwards; }
+        .toast.success { background: #2ed573; }
+        .toast.error { background: #ff4757; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+<button class="theme-btn" id="themeToggleBtn" onclick="toggleTheme()">🌞 Light Mode</button>
+
+<div class="container">
+    <div class="top-panel">
+        <span class="user-info">नमस्ते, {{ name }}!</span>
+        <span class="badge" id="coinBalance">🪙 Coins: {{ coins }}</span>
+        <a href="/logout" class="logout-btn">🚪 Logout</a>
+    </div>
+
+    <h2>⚡ AFSAR X DEV ⚡</h2>
+    
+    <label style="font-weight: bold; font-size: 13px; display:block; margin-bottom:5px;">🔑 Main Access Token / JWT:</label>
+    <input type="text" id="global_token" class="main-input" placeholder="Paste your authentication token here...">
+
+    <div class="feature-grid">
+        <button class="feature-btn" onclick="callAPI('/api/player_info', {}, 'Profile Fetched!')">👤 Player Profile</button>
+        <button class="feature-btn" onclick="callAPI('/api/check_info', {}, 'Bind Status Checked!')">ℹ️ Check Bind Info</button>
+        <button class="feature-btn" onclick="callAPI('/api/bound_accounts', {}, 'Platforms Fetched!')">🔗 Linked Accounts</button>
+        <button class="feature-btn" onclick="callAPI('/api/cancel_bind', {}, 'Request Cancelled!')">🚫 Cancel Bind Req</button>
+        <button class="feature-btn" onclick="openModal('modal-bind')">🔒 Link New Email</button>
+        <button class="feature-btn" onclick="openModal('modal-change')">🔄 Change Email</button>
+        <button class="feature-btn" onclick="openModal('modal-unbind')">🗑️ Unbind Email</button>
+        <button class="feature-btn" onclick="openModal('modal-tools')">🪄 Token Extractor</button>
+    </div>
+
+    <div class="console-container">
+        <div class="console-header">
+            <span>🖥️ Live Terminal Logs (Full Response)</span>
+            <button class="clear-btn" onclick="clearConsole()">🗑️ Clear</button>
+        </div>
+        <div class="console" id="console">System Ready... Waiting for Action.</div>
+    </div>
+</div>
+
+<div id="modal-bind" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">🔒 Link New Email</span>
+            <button class="close-btn" onclick="closeModal('modal-bind')">&times;</button>
+        </div>
+        <input type="email" id="bind_email" placeholder="Enter New Email">
+        <button class="action-btn" style="background:#3498db; color:#fff;" onclick="callAPI('/api/send_otp', {email: getVal('bind_email')}, 'OTP Sent!')">📧 Send OTP</button>
+        <input type="text" id="bind_otp" placeholder="Enter 6-Digit OTP">
+        <input type="text" id="bind_sec" placeholder="Create 6-Digit Security Code">
+        <button class="action-btn" onclick="smartBind()">Confirm & Bind</button>
+    </div>
+</div>
+
+<div id="modal-change" class="modal-overlay">
+    <div class="modal-box" style="max-width: 480px;">
+        <div class="modal-header">
+            <span class="modal-title">🔄 Change Current Email</span>
+            <button class="close-btn" onclick="closeModal('modal-change')">&times;</button>
+        </div>
+        <input type="email" id="c_old_email" placeholder="Old Bound Email">
+        <button class="action-btn" style="background:#e67e22; color:white;" onclick="callAPI('/api/send_otp', {email: getVal('c_old_email')}, 'OTP Sent to Old Email!')">Send OTP to Old</button>
+        <input type="text" id="c_old_otp" placeholder="Old OTP / Or Security Code below">
+        <input type="text" id="c_sec_code" placeholder="Security Code">
+        <hr style="border-color: var(--border); margin:12px 0;">
+        <input type="email" id="c_new_email" placeholder="New Email Address">
+        <button class="action-btn" style="background:#2ecc71;" onclick="callAPI('/api/send_otp', {email: getVal('c_new_email')}, 'OTP Sent to New Email!')">Send OTP to New</button>
+        <input type="text" id="c_new_otp" placeholder="New OTP">
+        <button class="action-btn" onclick="smartChange()">Verify & Update Email</button>
+    </div>
+</div>
+
+<div id="modal-unbind" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">🗑️ Unbind Email</span>
+            <button class="close-btn" onclick="closeModal('modal-unbind')">&times;</button>
+        </div>
+        <input type="email" id="unbind_email" placeholder="Bound Email">
+        <button class="action-btn" style="background:#34495e; color:#fff;" onclick="callAPI('/api/send_otp', {email: getVal('unbind_email')}, 'OTP Sent for Unbind!')">📧 Send OTP</button>
+        <input type="text" id="unbind_otp" placeholder="Enter OTP">
+        <input type="text" id="unbind_sec" placeholder="Enter Security Code">
+        <button class="action-btn" style="background:#e74c3c; color:#fff;" onclick="smartUnbind()">Confirm Unbind</button>
+    </div>
+</div>
+
+<div id="modal-tools" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">🪄 EAT Token Extractor</span>
+            <button class="close-btn" onclick="closeModal('modal-tools')">&times;</button>
+        </div>
+        <input type="text" id="eat_url" placeholder="Paste Auth URL / EAT Link Here">
+        <button class="action-btn" onclick="extractEatToken()">Extract & Auto-Fill</button>
+    </div>
+</div>
+
+
+<script>
+    // --- 📦 Modal Control Functions ---
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = 'none';
+        }
+    }
+
+    // --- 🔔 Toast Notifications ---
+    function showNotification(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerText = (type === 'success' ? '✅ ' : '❌ ') + message;
+        container.appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 3000);
+    }
+
+    // --- 🖥️ Full Unfiltered Terminal Logs ---
+    function clearConsole() { document.getElementById("console").innerText = "Console Cleared..."; }
+    
+    function logFullOutput(title, data) {
+        const consoleBox = document.getElementById("console");
+        const timestamp = new Date().toLocaleTimeString();
+        let logFormat = `[${timestamp}] >> ${title.toUpperCase()} <<\n`;
+        
+        if (typeof data === 'object') {
+            logFormat += JSON.stringify(data, null, 2) + '\n';
+        } else {
+            logFormat += `ℹ️ ${data}\n`;
+        }
+        
+        consoleBox.innerText = logFormat + `\n---------------------------\n` + consoleBox.innerText;
+    }
+
+    // --- 🔌 Main API Engine (WITH COIN SYSTEM) ---
+    function getVal(id) { return document.getElementById(id).value.trim(); }
+
+    async function callAPI(endpoint, extraData = {}, successMessage = null) {
+        const token = getVal('global_token');
+        const coinBalance = document.getElementById('coinBalance');
+        
+        // कॉइन चेक करना
+        let currentCoins = parseInt(coinBalance.innerText.replace(/\D/g, ''));
+        if (currentCoins <= 0) {
+            showNotification("आपके Coins खत्म हो गए हैं! Admin से संपर्क करें।", "error");
+            logFullOutput("COIN ERROR", "Action blocked. Insufficient coins.");
+            return null;
+        }
+
+        if(!token && endpoint !== '/api/eat_token') { 
+            showNotification("Main Token Empty!", "error");
+            return null; 
+        }
+        
+        logFullOutput(`Executing (${endpoint.replace('/api/','')})`, "Processing request...");
+
+        try {
+            const payload = endpoint === '/api/eat_token' 
+                ? { eat_url: extraData.eat || getVal('eat_url') } 
+                : { access_token: token, ...extraData };
+
+            const response = await fetch(endpoint, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            
+            const data = await response.json();
+            
+            logFullOutput(`Response (${endpoint.replace('/api/','')})`, data);
+
+            if (response.ok && !data.error) {
+                // अगर API कॉल सफल रहा, तो कॉइन काट लें
+                currentCoins -= 1;
+                coinBalance.innerText = "🪙 Coins: " + currentCoins;
+                
+                if(successMessage) showNotification(successMessage, "success");
+                return data;
+            } else {
+                showNotification(data.error || "Execution Failed", "error");
+                return null;
+            }
+        } catch (error) { 
+            showNotification("Server Connection Error!", "error");
+            logFullOutput("Critical Error", "Server response connection failed.");
+            return null; 
+        }
+    }
+
+    // --- ⚙️ Features Processing functions ---
+    async function smartBind() {
+        const e = getVal('bind_email'), o = getVal('bind_otp'), s = getVal('bind_sec');
+        if(!e || !o || !s) return showNotification("Fill all inputs!", "error");
+        const v = await callAPI('/api/verify_otp', {email: e, otp: o});
+        if(v && v.verifier_token) {
+            const b = await callAPI('/api/bind_email', {email: e, v_token: v.verifier_token, sec_code: s});
+            if(b) { closeModal('modal-bind'); showNotification("Successfully Bound!", "success"); }
+        }
+    }
+
+    async function smartChange() {
+        const oldE = getVal('c_old_email'), oldO = getVal('c_old_otp'), secC = getVal('c_sec_code');
+        const newE = getVal('c_new_email'), newO = getVal('c_new_otp');
+        if(!oldE || !newE || !newO) return showNotification("Missing required emails/OTPs", "error");
+
+        const id_res = await callAPI('/api/verify_identity', { email: oldE, otp: oldO, sec_code: secC });
+        if(!id_res || !id_res.identity_token) return;
+        
+        const v_res = await callAPI('/api/verify_otp', { email: newE, otp: newO });
+        if(!v_res || !v_res.verifier_token) return;
+
+        const c_res = await callAPI('/api/change_email', { id_token: id_res.identity_token, new_email: newE, v_token: v_res.verifier_token });
+        if(c_res) { closeModal('modal-change'); showNotification("Email Rebound Success!", "success"); }
+    }
+
+    async function smartUnbind() {
+        const e = getVal('unbind_email'), o = getVal('unbind_otp'), s = getVal('unbind_sec');
+        if(!e || (!o && !s)) return showNotification("Email & OTP/Security Code required", "error");
+        const id = await callAPI('/api/verify_identity', {email: e, otp: o, sec_code: s});
+        if(id && id.identity_token) {
+            const u = await callAPI('/api/unbind_email', {id_token: id.identity_token});
+            if(u) { closeModal('modal-unbind'); showNotification("Unbound Successfully!", "success"); }
+        }
+    }
+
+    async function extractEatToken() {
+        const urlVal = getVal('eat_url');
+        if(!urlVal) return showNotification("Paste valid link!", "error");
+        const res = await callAPI('/api/eat_token', { eat: urlVal });
+        if(res && res.access_token) {
+            document.getElementById('global_token').value = res.access_token;
+            closeModal('modal-tools');
+            showNotification("Token Auto-Filled!", "success");
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle("light-mode");
+        const isLight = document.body.classList.contains("light-mode");
+        document.getElementById("themeToggleBtn").innerHTML = isLight ? "🌙 Night Mode" : "🌞 Light Mode";
+    }
+</script>
+</body>
+              </html>
+              
