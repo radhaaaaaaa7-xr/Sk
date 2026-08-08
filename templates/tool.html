@@ -56,7 +56,7 @@
         .console-container { margin-top: 25px; background: var(--console-bg); border-radius: 10px; border: 2px solid var(--primary); overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.9), var(--glow); }
         .console-header { background: rgba(255,255,255,0.02); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid var(--primary); }
         .clear-btn { background: #ff4757; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
-        .console { color: var(--console-text); padding: 15px; font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; white-space: pre-wrap; height: 250px; overflow-y: auto; margin: 0; line-height: 1.6; text-shadow: 0 0 10px rgba(0, 255, 255, 0.95); }
+        .console { color: var(--console-text); padding: 15px; font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; white-space: pre-wrap; height: 220px; overflow-y: auto; margin: 0; line-height: 1.6; text-shadow: 0 0 10px rgba(0, 255, 255, 0.95); }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { padding: 12px 20px; border-radius: 6px; color: white; font-weight: bold; font-size: 13px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out forwards; }
@@ -88,14 +88,12 @@
 
     <div class="feature-grid">
         <button class="feature-btn" onclick="callAPI('/api/player_info', {}, 'Profile Fetched!')">👤 Player Profile</button>
-        <button class="feature-btn" onclick="checkBindInfo()">ℹ️ Check Bind Info</button>
+        <button class="feature-btn" onclick="callAPI('/api/check_info', {}, 'Bind Status Checked!')">ℹ️ Check Bind Info</button>
         <button class="feature-btn" onclick="callAPI('/api/cancel_bind', {}, 'Request Cancelled!')">🚫 Cancel Bind Req</button>
         <button class="feature-btn" onclick="openModal('modal-bind')">🔒 Link New Email</button>
         <button class="feature-btn" onclick="openModal('modal-change')">🔄 Change Email</button>
         <button class="feature-btn" onclick="openModal('modal-unbind')">🗑️ Unbind Email</button>
         <button class="feature-btn" onclick="openModal('modal-tools')">🪄 Token Extractor</button>
-        <!-- NEW BUTTON ADDED HERE -->
-        <button class="feature-btn" style="color:#ff4757; border-color:#ff4757;" onclick="callAPI('/api/revoke_token', {}, 'Token Revoked Successfully!')">🛑 Revoke Token</button>
     </div>
 
     <div class="console-container">
@@ -124,7 +122,7 @@
     </div>
 </div>
 
-<!-- 2. CHANGE EMAIL -->
+<!-- 2. CHANGE EMAIL (OTP + SEC CODE OPTION) -->
 <div id="modal-change" class="modal-overlay">
     <div class="modal-box" style="max-width: 480px;">
         <div class="modal-header">
@@ -158,7 +156,7 @@
     </div>
 </div>
 
-<!-- 3. UNBIND EMAIL -->
+<!-- 3. UNBIND EMAIL (OTP + SEC CODE OPTION) -->
 <div id="modal-unbind" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
@@ -257,32 +255,6 @@
         }
     }
 
-    // NEW FUNCTION: Check Bind Info & Format Pending Time automatically
-    async function checkBindInfo() {
-        const res = await callAPI('/api/check_info', {}, null);
-        if (res && !res.error) {
-            
-            // यह फंक्शन JSON के अंदर मौजूद हर UNIX टाइम को ढूंढकर असली डेट/टाइम में बदलेगा
-            function formatTimestamps(obj) {
-                for (let key in obj) {
-                    if (typeof obj[key] === 'object' && obj[key] !== null) {
-                        formatTimestamps(obj[key]);
-                    } else if (typeof obj[key] === 'number' && obj[key] > 1000000000 && obj[key] < 3000000000) {
-                        // 10 डिजिट के UNIX timestamp को मिलीसेकंड्स में बदलकर Date बनाना
-                        const date = new Date(obj[key] * 1000);
-                        obj[key + "_Formatted_Time"] = date.toLocaleString('hi-IN', { timeZone: 'Asia/Kolkata' });
-                    }
-                }
-            }
-            
-            let displayData = JSON.parse(JSON.stringify(res)); // Orignal data को सुरक्षित रखने के लिए कॉपी बनाई
-            formatTimestamps(displayData);
-
-            logFullOutput("BIND INFO (With Time)", displayData);
-            showNotification("Bind Info Fetched! Check Terminal.", "success");
-        }
-    }
-
     async function smartBind() {
         const e = getVal('bind_email'), o = getVal('bind_otp'), s = getVal('bind_sec');
         if(!e || !o || !s) return showNotification("सभी डिटेल्स भरें!", "error");
@@ -355,4 +327,3 @@
 </script>
 </body>
 </html>
-  
