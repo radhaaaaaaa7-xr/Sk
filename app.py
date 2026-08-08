@@ -172,6 +172,7 @@ def tool():
 
 @app.route('/api/player_info', methods=['POST'])
 def player_info():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     token = request.json.get('access_token')
     try:
@@ -187,6 +188,7 @@ def player_info():
 
 @app.route('/api/check_info', methods=['POST'])
 def check_info():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     try:
         res = requests.get("https://100067.connect.garena.com/game/account_security/bind:get_bind_info", params={'app_id': "100067", 'access_token': request.json.get('access_token')}, headers={'User-Agent': "GarenaMSDK/4.0.19P9"}).json()
@@ -196,6 +198,7 @@ def check_info():
 
 @app.route('/api/bound_accounts', methods=['POST'])
 def bound_accounts():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     try:
         d = requests.get("https://100067.connect.garena.com/bind/app/platform/info/get", params={"access_token": request.json.get('access_token')}, headers={"User-Agent": "GarenaMSDK/4.0.30"}).json()
@@ -206,58 +209,105 @@ def bound_accounts():
 
 @app.route('/api/cancel_bind', methods=['POST'])
 def cancel_bind():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     data = request.json
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:cancel_request", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token")}).json()
-    return jsonify(res)
+    try:
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:cancel_request", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token")}).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
-    if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
+    if 'user_id' not in session: 
+        return jsonify({"error": "Unauthorized Access"}), 401
+        
+    if not deduct_coin(session['user_id']): 
+        return jsonify({"error": "Insufficient Coins"}), 403
+        
     data = request.json
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:send_otp", headers=GARENA_HEADERS, data={"email": data.get("email"), "locale": "en_PK", "region": "PK", "app_id": "100067", "access_token": data.get("access_token")}).json()
-    return jsonify(res)
+    payload = {
+        "email": data.get("email"), 
+        "locale": "en_PK", 
+        "region": "PK", 
+        "app_id": "100067", 
+        "access_token": data.get("access_token"),
+        "type": "1"  
+    }
+    
+    try:
+        res = requests.post(
+            "https://100067.connect.garena.com/game/account_security/bind:send_otp", 
+            headers=GARENA_HEADERS, 
+            data=payload,
+            timeout=15
+        )
+        try:
+            return jsonify(res.json())
+        except ValueError:
+            return jsonify({
+                "error": "Garena API Blocked! (IP Issue)", 
+                "details": "Render IP block ho gaya hai ya Garena ne OTP reject kar diya."
+            }), 500
+    except Exception as e:
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
 @app.route('/api/verify_otp', methods=['POST'])
 def verify_otp():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     data = request.json
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:verify_otp", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token"), "email": data.get("email"), "code": data.get("otp"), "otp": data.get("otp"), "type": "1"}).json()
-    return jsonify(res)
+    try:
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:verify_otp", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token"), "email": data.get("email"), "code": data.get("otp"), "otp": data.get("otp"), "type": "1"}).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/verify_identity', methods=['POST'])
 def verify_identity():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     data = request.json
     payload = {"email": data.get("email"), "app_id": "100067", "access_token": data.get("access_token")}
     if data.get("sec_code"): payload["secondary_password"] = hashlib.sha256(data.get("sec_code").encode('utf-8')).hexdigest()
     else: payload["otp"] = data.get("otp")
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:verify_identity", headers=GARENA_HEADERS, data=payload).json()
-    return jsonify(res)
+    try:
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:verify_identity", headers=GARENA_HEADERS, data=payload).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/bind_email', methods=['POST'])
 def bind_email():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     data = request.json
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_bind_request", headers=GARENA_HEADERS, data={"email": data.get("email"), "app_id": "100067", "access_token": data.get("access_token"), "verifier_token": data.get("v_token"), "secondary_password": data.get("sec_code")}).json()
-    return jsonify(res)
+    try:
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_bind_request", headers=GARENA_HEADERS, data={"email": data.get("email"), "app_id": "100067", "access_token": data.get("access_token"), "verifier_token": data.get("v_token"), "secondary_password": data.get("sec_code")}).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/change_email', methods=['POST'])
 def change_email():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     data = request.json
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_rebind_request", headers=GARENA_HEADERS, data={"identity_token": data.get("id_token"), "email": data.get("new_email"), "app_id": "100067", "verifier_token": data.get("v_token"), "access_token": data.get("access_token")}).json()
-    return jsonify(res)
+    try:
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_rebind_request", headers=GARENA_HEADERS, data={"identity_token": data.get("id_token"), "email": data.get("new_email"), "app_id": "100067", "verifier_token": data.get("v_token"), "access_token": data.get("access_token")}).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/unbind_email', methods=['POST'])
 def unbind_email():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     data = request.json
-    res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_unbind_request", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token"), "identity_token": data.get("id_token")}).json()
-    return jsonify(res)
+    try:
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_unbind_request", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token"), "identity_token": data.get("id_token")}).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/eat_token', methods=['POST'])
 def eat_token():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     eat_url = request.json.get('eat_url', '')
     if "?" in eat_url: eat_url = urllib.parse.parse_qs(urllib.parse.urlparse(eat_url).query).get('eat', [''])[0]
@@ -270,4 +320,4 @@ def eat_token():
 
 if __name__ == '__main__':
     app.run(debug=True)
-              
+        
