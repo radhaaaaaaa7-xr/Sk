@@ -26,12 +26,10 @@
 
         .container { max-width: 600px; margin: 60px auto 20px; background: var(--box); padding: 25px; border-radius: 16px; box-shadow: var(--glow); }
         
-        /* 🧑‍💻 Top Header Panel (User Info, Coins & Actions) */
         .top-panel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(0, 243, 255, 0.05); padding: 12px 15px; border-radius: 10px; border: 1px solid var(--primary); margin-bottom: 20px; box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1); }
         .user-info { font-weight: bold; font-size: 15px; color: var(--primary); }
         .badge { background-color: #ffcc00; color: #000; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 13px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.5); }
         
-        /* New Buttons */
         .buy-coins-btn { background-color: #2ed573; color: #000; text-decoration: none; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 13px; margin-left: 5px; box-shadow: 0 0 10px rgba(46, 213, 115, 0.5); transition: 0.3s; display: inline-block; }
         .buy-coins-btn:hover { background-color: #7bed9f; transform: scale(1.05); }
         
@@ -152,10 +150,7 @@
             <span class="modal-title">🔄 Change Current Email</span>
             <button class="close-btn" onclick="closeModal('modal-change')">&times;</button>
         </div>
-        <input type="email" id="c_old_email" placeholder="Old Bound Email">
-        <button class="action-btn" style="background:#e67e22; color:white;" onclick="callAPI('/api/send_otp', {email: getVal('c_old_email')}, 'OTP Sent to Old Email!')">Send OTP to Old</button>
-        <input type="text" id="c_old_otp" placeholder="Old OTP / Or Security Code below">
-        <input type="text" id="c_sec_code" placeholder="Security Code">
+        <input type="text" id="c_sec_code" placeholder="Current Security Code">
         <hr style="border-color: var(--border); margin:12px 0;">
         <input type="email" id="c_new_email" placeholder="New Email Address">
         <button class="action-btn" style="background:#2ecc71;" onclick="callAPI('/api/send_otp', {email: getVal('c_new_email')}, 'OTP Sent to New Email!')">Send OTP to New</button>
@@ -170,10 +165,7 @@
             <span class="modal-title">🗑️ Unbind Email</span>
             <button class="close-btn" onclick="closeModal('modal-unbind')">&times;</button>
         </div>
-        <input type="email" id="unbind_email" placeholder="Bound Email">
-        <button class="action-btn" style="background:#34495e; color:#fff;" onclick="callAPI('/api/send_otp', {email: getVal('unbind_email')}, 'OTP Sent for Unbind!')">📧 Send OTP</button>
-        <input type="text" id="unbind_otp" placeholder="Enter OTP">
-        <input type="text" id="unbind_sec" placeholder="Enter Security Code">
+        <input type="text" id="unbind_sec" placeholder="Enter Current Security Code">
         <button class="action-btn" style="background:#e74c3c; color:#fff;" onclick="smartUnbind()">Confirm Unbind</button>
     </div>
 </div>
@@ -188,7 +180,6 @@
         <button class="action-btn" onclick="extractEatToken()">Extract & Auto-Fill</button>
     </div>
 </div>
-
 
 <script>
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -227,7 +218,6 @@
 
     function getVal(id) { return document.getElementById(id).value.trim(); }
 
-    // --- Change Password API Function ---
     async function changePassword() {
         const old_pw = getVal('old_pw');
         const new_pw = getVal('new_pw');
@@ -287,15 +277,17 @@
             const data = await response.json();
             logFullOutput(`Response (${endpoint.replace('/api/','')})`, data);
 
-            if (response.ok && !data.error) {
+            // API Error handling from Vercel APIs
+            if(data.error || (data.success === false)) {
+                showNotification(data.message || data.error || "Execution Failed", "error");
+                return null;
+            }
+
+            if (response.ok) {
                 currentCoins -= 1;
                 coinBalance.innerText = "🪙 Coins: " + currentCoins;
-                
                 if(successMessage) showNotification(successMessage, "success");
                 return data;
-            } else {
-                showNotification(data.error || "Execution Failed", "error");
-                return null;
             }
         } catch (error) { 
             showNotification("Server Connection Error!", "error");
@@ -307,35 +299,42 @@
     async function smartBind() {
         const e = getVal('bind_email'), o = getVal('bind_otp'), s = getVal('bind_sec');
         if(!e || !o || !s) return showNotification("Fill all inputs!", "error");
-        const v = await callAPI('/api/verify_otp', {email: e, otp: o});
-        if(v && v.verifier_token) {
-            const b = await callAPI('/api/bind_email', {email: e, v_token: v.verifier_token, sec_code: s});
-            if(b) { closeModal('modal-bind'); showNotification("Successfully Bound!", "success"); }
+        
+        // Vercel API completes bind directly with otp and sec_code in one step
+        const b = await callAPI('/api/bind_email', {email: e, otp: o, sec_code: s});
+        if(b) { 
+            closeModal('modal-bind'); 
+            showNotification("Successfully Bound!", "success"); 
         }
     }
 
     async function smartChange() {
-        const oldE = getVal('c_old_email'), oldO = getVal('c_old_otp'), secC = getVal('c_sec_code');
-        const newE = getVal('c_new_email'), newO = getVal('c_new_otp');
-        if(!oldE || !newE || !newO) return showNotification("Missing required emails/OTPs", "error");
+        const secC = getVal('c_sec_code'), newE = getVal('c_new_email'), newO = getVal('c_new_otp');
+        if(!newE || !newO || !secC) return showNotification("Missing required fields", "error");
 
-        const id_res = await callAPI('/api/verify_identity', { email: oldE, otp: oldO, sec_code: secC });
-        if(!id_res || !id_res.identity_token) return;
+        const id_res = await callAPI('/api/verify_identity', { sec_code: secC });
+        const id_token = id_res?.identity_token || id_res?.data?.identity_token;
+        if(!id_token) return;
         
         const v_res = await callAPI('/api/verify_otp', { email: newE, otp: newO });
-        if(!v_res || !v_res.verifier_token) return;
+        const v_token = v_res?.verifier_token || v_res?.data?.verifier_token;
+        if(!v_token) return;
 
-        const c_res = await callAPI('/api/change_email', { id_token: id_res.identity_token, new_email: newE, v_token: v_res.verifier_token });
-        if(c_res) { closeModal('modal-change'); showNotification("Email Rebound Success!", "success"); }
+        const c_res = await callAPI('/api/change_email', { id_token: id_token, new_email: newE, v_token: v_token });
+        if(c_res) { 
+            closeModal('modal-change'); 
+            showNotification("Email Rebound Success!", "success"); 
+        }
     }
 
     async function smartUnbind() {
-        const e = getVal('unbind_email'), o = getVal('unbind_otp'), s = getVal('unbind_sec');
-        if(!e || (!o && !s)) return showNotification("Email & OTP/Security Code required", "error");
-        const id = await callAPI('/api/verify_identity', {email: e, otp: o, sec_code: s});
-        if(id && id.identity_token) {
-            const u = await callAPI('/api/unbind_email', {id_token: id.identity_token});
-            if(u) { closeModal('modal-unbind'); showNotification("Unbound Successfully!", "success"); }
+        const s = getVal('unbind_sec');
+        if(!s) return showNotification("Security Code required", "error");
+        
+        const u = await callAPI('/api/unbind_email', {sec_code: s});
+        if(u) { 
+            closeModal('modal-unbind'); 
+            showNotification("Unbound Successfully!", "success"); 
         }
     }
 
@@ -357,4 +356,5 @@
     }
 </script>
 </body>
-</html>
+            </html>
+            
