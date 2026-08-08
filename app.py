@@ -12,14 +12,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_change_this_later'
 
-# आपका Neon.tech Database URL
+# Database URL
 DB_URL = "postgresql://neondb_owner:npg_If5NuxsG1wRt@ep-wandering-darkness-ahrzvfsm-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-
-# Garena API के लिए डिफ़ॉल्ट हेडर्स
-GARENA_HEADERS = {
-    "User-Agent": "GarenaMSDK/4.0.30", 
-    "Content-Type": "application/x-www-form-urlencoded"
-}
 
 def get_db_connection():
     return psycopg2.connect(DB_URL)
@@ -50,15 +44,12 @@ def deduct_coin(user_id, cost=1):
         with conn.cursor() as c:
             c.execute('SELECT coins FROM users WHERE id=%s', (user_id,))
             coins = c.fetchone()[0]
-            
-            if coins < cost:
-                return False
-                
+            if coins < cost: return False
             c.execute('UPDATE users SET coins = coins - %s WHERE id=%s', (cost, user_id))
         conn.commit()
         return True
 
-# ----------------- LOGIN / SIGNUP ROUTES -----------------
+# ----------------- LOGIN / SIGNUP / ADMIN -----------------
 @app.route('/')
 def home():
     if 'user_id' in session:
@@ -90,11 +81,11 @@ def signup():
     name = request.form.get('name')
     email = request.form.get('email')
     password = request.form.get('password')
-    hashed_password = generate_password_hash(password)
+    hashed_pw = generate_password_hash(password)
     try:
         with get_db_connection() as conn:
             with conn.cursor() as c:
-                c.execute('INSERT INTO users (name, email, password, coins, is_admin) VALUES (%s, %s, %s, 0, 0)', (name, email, hashed_password))
+                c.execute('INSERT INTO users (name, email, password, coins, is_admin) VALUES (%s, %s, %s, 0, 0)', (name, email, hashed_pw))
             conn.commit()
         return render_template('login.html', success="अकाउंट बन गया! कृपया Admin से कॉइन लें।")
     except IntegrityError:
@@ -108,29 +99,18 @@ def logout():
 @app.route('/api/change_password', methods=['POST'])
 def change_password():
     if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
-    
     data = request.json
-    old_pw = data.get('old_password')
-    new_pw = data.get('new_password')
-    
-    if not old_pw or not new_pw:
-        return jsonify({"error": "पासवर्ड खाली नहीं हो सकता!"}), 400
-        
+    old_pw, new_pw = data.get('old_password'), data.get('new_password')
+    if not old_pw or not new_pw: return jsonify({"error": "पासवर्ड खाली नहीं हो सकता!"}), 400
     with get_db_connection() as conn:
         with conn.cursor() as c:
             c.execute('SELECT password FROM users WHERE id=%s', (session['user_id'],))
             user_pw = c.fetchone()[0]
-            
-            if not check_password_hash(user_pw, old_pw):
-                return jsonify({"error": "पुराना पासवर्ड गलत है!"}), 400
-            
-            hashed_new = generate_password_hash(new_pw)
-            c.execute('UPDATE users SET password = %s WHERE id=%s', (hashed_new, session['user_id']))
+            if not check_password_hash(user_pw, old_pw): return jsonify({"error": "पुराना पासवर्ड गलत है!"}), 400
+            c.execute('UPDATE users SET password = %s WHERE id=%s', (generate_password_hash(new_pw), session['user_id']))
         conn.commit()
-        
     return jsonify({"success": True})
 
-# ----------------- ADMIN ROUTES -----------------
 @app.route('/admin')
 def admin_panel():
     if session.get('is_admin') != 1: return redirect(url_for('home'))
@@ -145,7 +125,6 @@ def manage_coins():
     if session.get('is_admin') != 1: return jsonify({"error": "Unauthorized"}), 403
     data = request.json
     user_id, amount, action = data.get('user_id'), int(data.get('amount', 0)), data.get('action')
-    
     with get_db_connection() as conn:
         with conn.cursor() as c:
             if action == 'add': c.execute('UPDATE users SET coins = coins + %s WHERE id=%s', (amount, user_id))
@@ -158,7 +137,6 @@ def manage_coins():
         conn.commit()
     return jsonify({"success": True, "new_balance": updated_balance})
 
-# ----------------- TOOL PAGE -----------------
 @app.route('/tool')
 def tool():
     if 'user_id' not in session or session.get('is_admin') == 1: return redirect(url_for('login_page'))
@@ -168,37 +146,21 @@ def tool():
             coins = c.fetchone()[0]
     return render_template('tool.html', name=session['name'], coins=coins)
 
-# ----------------- GARENA API ROUTES -----------------
+# ----------------- GARENA VERCEL APIs (Bypass Render Block) -----------------
 
 @app.route('/api/player_info', methods=['POST'])
 def player_info():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    token = request.json.get('access_token')
     try:
-        res = requests.get(f"https://api-otrss.garena.com/support/callback/?access_token={token}", headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True, timeout=15)
+        res = requests.get(f"https://api-otrss.garena.com/support/callback/?access_token={request.json.get('access_token')}", headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True, timeout=15)
         q = urllib.parse.parse_qs(urllib.parse.urlparse(res.url).query)
-        return jsonify({
-            "result": 0, 
-            "account_id": q.get('account_id', ['Unknown'])[0],
-            "nickname": q.get('nickname', ['Unknown'])[0],
-            "region": q.get('region', ['Unknown'])[0]
-        })
-    except Exception as e: return jsonify({"error": str(e)}), 500
-
-@app.route('/api/check_info', methods=['POST'])
-def check_info():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
-    if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    try:
-        res = requests.get("https://100067.connect.garena.com/game/account_security/bind:get_bind_info", params={'app_id': "100067", 'access_token': request.json.get('access_token')}, headers={'User-Agent': "GarenaMSDK/4.0.19P9"}).json()
-        res['result'] = res.get('result', 0)
-        return jsonify(res)
+        return jsonify({"result": 0, "account_id": q.get('account_id', ['Unknown'])[0], "nickname": q.get('nickname', ['Unknown'])[0], "region": q.get('region', ['Unknown'])[0]})
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/bound_accounts', methods=['POST'])
 def bound_accounts():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     try:
         d = requests.get("https://100067.connect.garena.com/bind/app/platform/info/get", params={"access_token": request.json.get('access_token')}, headers={"User-Agent": "GarenaMSDK/4.0.30"}).json()
@@ -207,107 +169,81 @@ def bound_accounts():
         return jsonify({"result": 0, "bound_platforms": accounts})
     except: return jsonify({"error": "Failed to fetch accounts"}), 500
 
+@app.route('/api/check_info', methods=['POST'])
+def check_info():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
+    if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
+    try:
+        res = requests.get("https://bindinfocrownx612.vercel.app/check", params={'access_token': request.json.get('access_token')}, timeout=15).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
 @app.route('/api/cancel_bind', methods=['POST'])
 def cancel_bind():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    data = request.json
     try:
-        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:cancel_request", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token")}).json()
+        res = requests.get("https://bindcnclcrownx34.vercel.app/cancelbind", params={'access_token': request.json.get("access_token")}, timeout=15).json()
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
-    if 'user_id' not in session: 
-        return jsonify({"error": "Unauthorized Access"}), 401
-        
-    if not deduct_coin(session['user_id']): 
-        return jsonify({"error": "Insufficient Coins"}), 403
-        
-    data = request.json
-    payload = {
-        "email": data.get("email"), 
-        "locale": "en_PK", 
-        "region": "PK", 
-        "app_id": "100067", 
-        "access_token": data.get("access_token"),
-        "type": "1"  
-    }
-    
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
+    if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     try:
-        res = requests.post(
-            "https://100067.connect.garena.com/game/account_security/bind:send_otp", 
-            headers=GARENA_HEADERS, 
-            data=payload,
-            timeout=15
-        )
-        try:
-            return jsonify(res.json())
-        except ValueError:
-            return jsonify({
-                "error": "Garena API Blocked! (IP Issue)", 
-                "details": "Render IP block ho gaya hai ya Garena ne OTP reject kar diya."
-            }), 500
-    except Exception as e:
-        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+        res = requests.get("https://chngemailcode48.vercel.app/send_otp", params={'access_token': request.json.get("access_token"), 'email': request.json.get("email")}, timeout=15).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/verify_otp', methods=['POST'])
 def verify_otp():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    data = request.json
     try:
-        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:verify_otp", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token"), "email": data.get("email"), "code": data.get("otp"), "otp": data.get("otp"), "type": "1"}).json()
+        res = requests.get("https://chngemailcode48.vercel.app/verify_otp", params={'access_token': request.json.get("access_token"), 'email': request.json.get("email"), 'otp': request.json.get("otp")}, timeout=15).json()
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/verify_identity', methods=['POST'])
 def verify_identity():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    data = request.json
-    payload = {"email": data.get("email"), "app_id": "100067", "access_token": data.get("access_token")}
-    if data.get("sec_code"): payload["secondary_password"] = hashlib.sha256(data.get("sec_code").encode('utf-8')).hexdigest()
-    else: payload["otp"] = data.get("otp")
     try:
-        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:verify_identity", headers=GARENA_HEADERS, data=payload).json()
+        res = requests.get("https://chngemailcode48.vercel.app/verify_identity", params={'access_token': request.json.get("access_token"), 'code': request.json.get("sec_code")}, timeout=15).json()
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/bind_email', methods=['POST'])
 def bind_email():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    data = request.json
     try:
-        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_bind_request", headers=GARENA_HEADERS, data={"email": data.get("email"), "app_id": "100067", "access_token": data.get("access_token"), "verifier_token": data.get("v_token"), "secondary_password": data.get("sec_code")}).json()
+        res = requests.get("https://bindcnclcrownx34.vercel.app/confirmbind", params={'access_token': request.json.get("access_token"), 'email': request.json.get("email"), 'otp': request.json.get("otp"), 'security_code': request.json.get("sec_code")}, timeout=15).json()
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/change_email', methods=['POST'])
 def change_email():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    data = request.json
     try:
-        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_rebind_request", headers=GARENA_HEADERS, data={"identity_token": data.get("id_token"), "email": data.get("new_email"), "app_id": "100067", "verifier_token": data.get("v_token"), "access_token": data.get("access_token")}).json()
+        res = requests.get("https://chngemailcode48.vercel.app/create_rebind", params={'access_token': request.json.get("access_token"), 'email': request.json.get("new_email"), 'identity_token': request.json.get("id_token"), 'verifier_token': request.json.get("v_token")}, timeout=15).json()
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/unbind_email', methods=['POST'])
 def unbind_email():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
-    data = request.json
     try:
-        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:create_unbind_request", headers=GARENA_HEADERS, data={"app_id": "100067", "access_token": data.get("access_token"), "identity_token": data.get("id_token")}).json()
+        res = requests.get("https://crownxnewkey10010.vercel.app/securityunbind", params={'access_token': request.json.get("access_token"), 'security_code': request.json.get("sec_code")}, timeout=15).json()
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/eat_token', methods=['POST'])
 def eat_token():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized Access"}), 401
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     if not deduct_coin(session['user_id']): return jsonify({"error": "Insufficient Coins"}), 403
     eat_url = request.json.get('eat_url', '')
     if "?" in eat_url: eat_url = urllib.parse.parse_qs(urllib.parse.urlparse(eat_url).query).get('eat', [''])[0]
