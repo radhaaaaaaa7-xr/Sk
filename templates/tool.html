@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AFSAR X DEV</title>
     <style>
-        /* 🌙 Dark Mode (Default) */
         :root { 
             --bg: #0a0a12; --box: #131326; --primary: #00f3ff; --primary-hover: #00b3cc;
             --text: #ffffff; --border: #1f1f3d; --input-bg: #1a1a3a; --console-bg: #05050a;
             --console-text: #00ffff; --glow: 0 0 18px rgba(0, 243, 255, 0.4); --modal-bg: #161630;
         }
-
-        /* 🌞 Light Mode */
         body.light-mode {
             --bg: #f0f4f8; --box: #ffffff; --primary: #ff4757; --primary-hover: #e03747;
             --text: #2f3542; --border: #ced6e0; --input-bg: #f1f2f6; --console-bg: #1e272e;
@@ -30,13 +27,6 @@
         .user-info { font-weight: bold; font-size: 15px; color: var(--primary); }
         .badge { background-color: #ffcc00; color: #000; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 13px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.5); }
         
-        .buy-coins-btn { background-color: #2ed573; color: #000; text-decoration: none; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 13px; margin-left: 5px; box-shadow: 0 0 10px rgba(46, 213, 115, 0.5); transition: 0.3s; display: inline-block; }
-        .buy-coins-btn:hover { background-color: #7bed9f; transform: scale(1.05); }
-        
-        .pw-btn { background-color: #34495e; color: white; border: 1px solid #34495e; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.3s; margin-right: 5px; }
-        .pw-btn:hover { background-color: transparent; color: #34495e; box-shadow: 0 0 10px rgba(52, 73, 94, 0.5); }
-        body.light-mode .pw-btn:hover { color: #2c3e50; border-color: #2c3e50;}
-
         .logout-btn { background-color: #ff4757; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: 0.3s; border: 1px solid #ff4757; display: inline-block;}
         .logout-btn:hover { background-color: transparent; color: #ff4757; box-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
 
@@ -58,7 +48,7 @@
         .close-btn { background: none; border: none; color: #ff4757; font-size: 24px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .close-btn:hover { transform: scale(1.2); }
 
-        .modal-box input { width: 93%; padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); }
+        .modal-box input, .modal-box select { width: 93%; padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); }
         .action-btn { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
         .action-btn:hover { background: var(--primary-hover); }
         body.light-mode .action-btn { color: #fff; }
@@ -85,10 +75,8 @@
         <span class="user-info">नमस्ते, {{ name }}!</span>
         <div style="display: flex; align-items: center;">
             <span class="badge" id="coinBalance">🪙 Coins: {{ coins }}</span>
-            <a href="https://t.me/Khansab6565" target="_blank" class="buy-coins-btn">🛒 Buy Coins</a>
         </div>
         <div>
-            <button class="pw-btn" onclick="openModal('modal-password')">🔑 Pwd</button>
             <a href="/logout" class="logout-btn">🚪 Logout</a>
         </div>
     </div>
@@ -101,7 +89,6 @@
     <div class="feature-grid">
         <button class="feature-btn" onclick="callAPI('/api/player_info', {}, 'Profile Fetched!')">👤 Player Profile</button>
         <button class="feature-btn" onclick="callAPI('/api/check_info', {}, 'Bind Status Checked!')">ℹ️ Check Bind Info</button>
-        <button class="feature-btn" onclick="callAPI('/api/bound_accounts', {}, 'Platforms Fetched!')">🔗 Linked Accounts</button>
         <button class="feature-btn" onclick="callAPI('/api/cancel_bind', {}, 'Request Cancelled!')">🚫 Cancel Bind Req</button>
         <button class="feature-btn" onclick="openModal('modal-bind')">🔒 Link New Email</button>
         <button class="feature-btn" onclick="openModal('modal-change')">🔄 Change Email</button>
@@ -111,25 +98,16 @@
 
     <div class="console-container">
         <div class="console-header">
-            <span>🖥️ Live Terminal Logs (Full Response)</span>
+            <span>🖥️ Live Terminal Logs</span>
             <button class="clear-btn" onclick="clearConsole()">🗑️ Clear</button>
         </div>
         <div class="console" id="console">System Ready... Waiting for Action.</div>
     </div>
 </div>
 
-<div id="modal-password" class="modal-overlay">
-    <div class="modal-box">
-        <div class="modal-header">
-            <span class="modal-title">🔑 Change Password</span>
-            <button class="close-btn" onclick="closeModal('modal-password')">&times;</button>
-        </div>
-        <input type="password" id="old_pw" placeholder="पुराना पासवर्ड (Old Password)">
-        <input type="password" id="new_pw" placeholder="नया पासवर्ड (New Password)">
-        <button class="action-btn" style="background:#e67e22; color:white;" onclick="changePassword()">Update Password</button>
-    </div>
-</div>
+<!-- ================= MODALS ================= -->
 
+<!-- 1. BIND EMAIL -->
 <div id="modal-bind" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
@@ -144,32 +122,69 @@
     </div>
 </div>
 
+<!-- 2. CHANGE EMAIL (OTP + SEC CODE OPTION) -->
 <div id="modal-change" class="modal-overlay">
     <div class="modal-box" style="max-width: 480px;">
         <div class="modal-header">
             <span class="modal-title">🔄 Change Current Email</span>
             <button class="close-btn" onclick="closeModal('modal-change')">&times;</button>
         </div>
-        <input type="text" id="c_sec_code" placeholder="Current Security Code">
-        <hr style="border-color: var(--border); margin:12px 0;">
+        
+        <label style="font-size:12px; font-weight:bold;">पुराना ईमेल कैसे वेरीफाई करें?</label>
+        <select id="change_method" onchange="toggleMethod('change')">
+            <option value="sec">🔑 Security Code से</option>
+            <option value="otp">📧 Old Email OTP से</option>
+        </select>
+
+        <div id="change_sec_div">
+            <input type="text" id="c_sec_code" placeholder="Current Security Code">
+        </div>
+
+        <div id="change_otp_div" style="display:none;">
+            <input type="email" id="c_old_email" placeholder="Current / Old Email">
+            <button class="action-btn" style="background:#e67e22; color:#fff; padding:8px;" onclick="callAPI('/api/send_otp', {email: getVal('c_old_email')}, 'OTP Sent to Old Email!')">Send OTP to Old Email</button>
+            <input type="text" id="c_old_otp" placeholder="Enter Old Email OTP">
+        </div>
+
+        <hr style="border-color: var(--border); margin:15px 0;">
+        
         <input type="email" id="c_new_email" placeholder="New Email Address">
         <button class="action-btn" style="background:#2ecc71;" onclick="callAPI('/api/send_otp', {email: getVal('c_new_email')}, 'OTP Sent to New Email!')">Send OTP to New</button>
         <input type="text" id="c_new_otp" placeholder="New OTP">
+        
         <button class="action-btn" onclick="smartChange()">Verify & Update Email</button>
     </div>
 </div>
 
+<!-- 3. UNBIND EMAIL (OTP + SEC CODE OPTION) -->
 <div id="modal-unbind" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
             <span class="modal-title">🗑️ Unbind Email</span>
             <button class="close-btn" onclick="closeModal('modal-unbind')">&times;</button>
         </div>
-        <input type="text" id="unbind_sec" placeholder="Enter Current Security Code">
+        
+        <label style="font-size:12px; font-weight:bold;">ईमेल कैसे हटायें?</label>
+        <select id="unbind_method" onchange="toggleMethod('unbind')">
+            <option value="sec">🔑 Security Code से</option>
+            <option value="otp">📧 Email OTP से</option>
+        </select>
+
+        <div id="unbind_sec_div">
+            <input type="text" id="unbind_sec" placeholder="Enter Current Security Code">
+        </div>
+
+        <div id="unbind_otp_div" style="display:none;">
+            <input type="email" id="unbind_old_email" placeholder="Bound Email">
+            <button class="action-btn" style="background:#e67e22; color:#fff; padding:8px;" onclick="callAPI('/api/send_otp', {email: getVal('unbind_old_email')}, 'OTP Sent!')">Send OTP</button>
+            <input type="text" id="unbind_old_otp" placeholder="Enter OTP">
+        </div>
+
         <button class="action-btn" style="background:#e74c3c; color:#fff;" onclick="smartUnbind()">Confirm Unbind</button>
     </div>
 </div>
 
+<!-- 4. TOKEN EXTRACTOR -->
 <div id="modal-tools" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
@@ -181,166 +196,122 @@
     </div>
 </div>
 
+<!-- ================= JAVASCRIPT ================= -->
 <script>
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    window.onclick = function(e) { if (e.target.classList.contains('modal-overlay')) e.target.style.display = 'none'; }
+    function getVal(id) { return document.getElementById(id).value.trim(); }
 
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal-overlay')) {
-            event.target.style.display = 'none';
-        }
+    function toggleMethod(type) {
+        const method = document.getElementById(type + '_method').value;
+        document.getElementById(type + '_sec_div').style.display = method === 'sec' ? 'block' : 'none';
+        document.getElementById(type + '_otp_div').style.display = method === 'otp' ? 'block' : 'none';
     }
 
-    function showNotification(message, type = 'success') {
+    function showNotification(msg, type = 'success') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.innerText = (type === 'success' ? '✅ ' : '❌ ') + message;
+        toast.innerText = (type === 'success' ? '✅ ' : '❌ ') + msg;
         container.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 3000);
+        setTimeout(() => toast.remove(), 3000);
     }
 
     function clearConsole() { document.getElementById("console").innerText = "Console Cleared..."; }
     
     function logFullOutput(title, data) {
         const consoleBox = document.getElementById("console");
-        const timestamp = new Date().toLocaleTimeString();
-        let logFormat = `[${timestamp}] >> ${title.toUpperCase()} <<\n`;
-        
-        if (typeof data === 'object') {
-            logFormat += JSON.stringify(data, null, 2) + '\n';
-        } else {
-            logFormat += `ℹ️ ${data}\n`;
-        }
-        
-        consoleBox.innerText = logFormat + `\n---------------------------\n` + consoleBox.innerText;
+        const time = new Date().toLocaleTimeString();
+        let format = `[${time}] >> ${title.toUpperCase()} <<\n`;
+        format += (typeof data === 'object') ? JSON.stringify(data, null, 2) + '\n' : `ℹ️ ${data}\n`;
+        consoleBox.innerText = format + `\n---------------------------\n` + consoleBox.innerText;
     }
 
-    function getVal(id) { return document.getElementById(id).value.trim(); }
-
-    async function changePassword() {
-        const old_pw = getVal('old_pw');
-        const new_pw = getVal('new_pw');
-
-        if(!old_pw || !new_pw) return showNotification("कृपया दोनों पासवर्ड भरें!", "error");
-
-        try {
-            const response = await fetch('/api/change_password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ old_password: old_pw, new_password: new_pw })
-            });
-            const data = await response.json();
-            
-            if(response.ok && data.success) {
-                closeModal('modal-password');
-                showNotification("पासवर्ड सफलतापूर्वक बदल गया!", "success");
-                document.getElementById('old_pw').value = '';
-                document.getElementById('new_pw').value = '';
-            } else {
-                showNotification(data.error || "पासवर्ड बदलने में समस्या आई!", "error");
-            }
-        } catch (error) {
-            showNotification("नेटवर्क एरर!", "error");
-        }
-    }
-
-    async function callAPI(endpoint, extraData = {}, successMessage = null) {
+    async function callAPI(endpoint, extraData = {}, successMsg = null) {
         const token = getVal('global_token');
-        const coinBalance = document.getElementById('coinBalance');
+        let coins = parseInt(document.getElementById('coinBalance').innerText.replace(/\D/g, ''));
         
-        let currentCoins = parseInt(coinBalance.innerText.replace(/\D/g, ''));
-        if (currentCoins <= 0) {
-            showNotification("आपके Coins खत्म हो गए हैं! Admin से संपर्क करें।", "error");
-            logFullOutput("COIN ERROR", "Action blocked. Insufficient coins.");
-            return null;
-        }
-
-        if(!token && endpoint !== '/api/eat_token') { 
-            showNotification("Main Token Empty!", "error");
-            return null; 
-        }
+        if (coins <= 0) return showNotification("Coins खत्म हो गए हैं!", "error"), null;
+        if (!token && endpoint !== '/api/eat_token') return showNotification("Main Token Empty!", "error"), null; 
         
-        logFullOutput(`Executing (${endpoint.replace('/api/','')})`, "Processing request...");
-
+        logFullOutput(`Executing (${endpoint})`, "Processing...");
+        
         try {
-            const payload = endpoint === '/api/eat_token' 
-                ? { eat_url: extraData.eat || getVal('eat_url') } 
-                : { access_token: token, ...extraData };
-
-            const response = await fetch(endpoint, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload) 
-            });
+            const payload = endpoint === '/api/eat_token' ? { eat_url: extraData.eat || getVal('eat_url') } : { access_token: token, ...extraData };
+            const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const data = await res.json();
             
-            const data = await response.json();
-            logFullOutput(`Response (${endpoint.replace('/api/','')})`, data);
-
-            // API Error handling from Vercel APIs
-            if(data.error || (data.success === false)) {
-                showNotification(data.message || data.error || "Execution Failed", "error");
-                return null;
-            }
-
-            if (response.ok) {
-                currentCoins -= 1;
-                coinBalance.innerText = "🪙 Coins: " + currentCoins;
-                if(successMessage) showNotification(successMessage, "success");
+            logFullOutput(`Response (${endpoint})`, data);
+            
+            if (data.error) return showNotification(data.error, "error"), null;
+            if (res.ok) {
+                document.getElementById('coinBalance').innerText = "🪙 Coins: " + (coins - 1);
+                if(successMsg) showNotification(successMsg, "success");
                 return data;
             }
         } catch (error) { 
-            showNotification("Server Connection Error!", "error");
-            logFullOutput("Critical Error", "Server response connection failed.");
-            return null; 
+            return showNotification("Server Error!", "error"), null; 
         }
     }
 
     async function smartBind() {
         const e = getVal('bind_email'), o = getVal('bind_otp'), s = getVal('bind_sec');
-        if(!e || !o || !s) return showNotification("Fill all inputs!", "error");
+        if(!e || !o || !s) return showNotification("सभी डिटेल्स भरें!", "error");
         
-        // Vercel API completes bind directly with otp and sec_code in one step
-        const b = await callAPI('/api/bind_email', {email: e, otp: o, sec_code: s});
-        if(b) { 
-            closeModal('modal-bind'); 
-            showNotification("Successfully Bound!", "success"); 
-        }
+        const v_res = await callAPI('/api/verify_otp', { email: e, otp: o });
+        const v_token = v_res?.verifier_token || v_res?.data?.verifier_token;
+        if(!v_token) return showNotification("OTP वेरीफाई नहीं हुआ!", "error");
+
+        const b = await callAPI('/api/bind_email', {email: e, otp: o, sec_code: s, v_token: v_token});
+        if(b && !b.error) { closeModal('modal-bind'); showNotification("Bind Success!", "success"); }
     }
 
     async function smartChange() {
-        const secC = getVal('c_sec_code'), newE = getVal('c_new_email'), newO = getVal('c_new_otp');
-        if(!newE || !newO || !secC) return showNotification("Missing required fields", "error");
+        const method = document.getElementById('change_method').value;
+        let id_token = null;
 
-        const id_res = await callAPI('/api/verify_identity', { sec_code: secC });
-        const id_token = id_res?.identity_token || id_res?.data?.identity_token;
-        if(!id_token) return;
-        
+        if (method === 'sec') {
+            const res = await callAPI('/api/verify_identity', { sec_code: getVal('c_sec_code') });
+            id_token = res?.identity_token;
+        } else {
+            const res = await callAPI('/api/verify_identity', { email: getVal('c_old_email'), otp: getVal('c_old_otp') });
+            id_token = res?.identity_token;
+        }
+
+        if(!id_token) return showNotification("पुराना अकाउंट वेरीफाई नहीं हुआ!", "error");
+
+        const newE = getVal('c_new_email'), newO = getVal('c_new_otp');
         const v_res = await callAPI('/api/verify_otp', { email: newE, otp: newO });
-        const v_token = v_res?.verifier_token || v_res?.data?.verifier_token;
-        if(!v_token) return;
+        const v_token = v_res?.verifier_token;
+        
+        if(!v_token) return showNotification("नया OTP वेरीफाई नहीं हुआ!", "error");
 
         const c_res = await callAPI('/api/change_email', { id_token: id_token, new_email: newE, v_token: v_token });
-        if(c_res) { 
-            closeModal('modal-change'); 
-            showNotification("Email Rebound Success!", "success"); 
-        }
+        if(c_res && !c_res.error) { closeModal('modal-change'); showNotification("Email Change Success!", "success"); }
     }
 
     async function smartUnbind() {
-        const s = getVal('unbind_sec');
-        if(!s) return showNotification("Security Code required", "error");
-        
-        const u = await callAPI('/api/unbind_email', {sec_code: s});
-        if(u) { 
-            closeModal('modal-unbind'); 
-            showNotification("Unbound Successfully!", "success"); 
+        const method = document.getElementById('unbind_method').value;
+        let id_token = null;
+
+        if (method === 'sec') {
+            const res = await callAPI('/api/verify_identity', { sec_code: getVal('unbind_sec') });
+            id_token = res?.identity_token;
+        } else {
+            const res = await callAPI('/api/verify_identity', { email: getVal('unbind_old_email'), otp: getVal('unbind_old_otp') });
+            id_token = res?.identity_token;
         }
+
+        if(!id_token) return showNotification("आइडेंटिटी वेरीफाई नहीं हुई!", "error");
+        
+        const u = await callAPI('/api/unbind_email', { id_token: id_token });
+        if(u && !u.error) { closeModal('modal-unbind'); showNotification("Unbind Success!", "success"); }
     }
 
     async function extractEatToken() {
         const urlVal = getVal('eat_url');
-        if(!urlVal) return showNotification("Paste valid link!", "error");
+        if(!urlVal) return showNotification("Link डालें!", "error");
         const res = await callAPI('/api/eat_token', { eat: urlVal });
         if(res && res.access_token) {
             document.getElementById('global_token').value = res.access_token;
@@ -351,10 +322,9 @@
 
     function toggleTheme() {
         document.body.classList.toggle("light-mode");
-        const isLight = document.body.classList.contains("light-mode");
-        document.getElementById("themeToggleBtn").innerHTML = isLight ? "🌙 Night Mode" : "🌞 Light Mode";
+        document.getElementById("themeToggleBtn").innerHTML = document.body.classList.contains("light-mode") ? "🌙 Night Mode" : "🌞 Light Mode";
     }
 </script>
 </body>
-            </html>
-            
+    </html>
+    
