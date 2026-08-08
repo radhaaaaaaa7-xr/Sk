@@ -118,7 +118,7 @@ def tool():
             coins = c.fetchone()[0]
     return render_template('tool.html', name=session['name'], coins=coins)
 
-# ----------------- API ROUTES (OTP & SECURITY CODE BOTH SUPPORTED) -----------------
+# ----------------- API ROUTES -----------------
 
 @app.route('/api/player_info', methods=['POST'])
 def player_info():
@@ -145,7 +145,17 @@ def cancel_bind():
         return jsonify(res)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
-# VERCEL API (Bypass Render Block for OTP ONLY)
+# NEW: REVOKE ACCESS TOKEN API
+@app.route('/api/revoke_token', methods=['POST'])
+def revoke_token():
+    if not deduct_coin(session.get('user_id')): return jsonify({"error": "Insufficient Coins"}), 403
+    try:
+        payload = {"app_id": "100067", "access_token": request.json.get("access_token")}
+        res = requests.post("https://100067.connect.garena.com/game/account_security/bind:revoke_token", headers=GARENA_HEADERS, data=payload).json()
+        return jsonify(res)
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
+# VERCEL API FOR OTP
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
     if not deduct_coin(session.get('user_id')): return jsonify({"error": "Insufficient Coins"}), 403
@@ -222,4 +232,4 @@ def eat_token():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
+        
